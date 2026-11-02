@@ -1,2 +1,3 @@
-2026/11/02-22:17:06.772 52cc Creating DB C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\bin\Debug\net10.0-windows10.0.22621.0\DesktopWidgets.App.exe.WebView2\EBWebView\Default\shared_proto_db since it was missing.
-2026/11/02-22:17:06.789 52cc Reusing MANIFEST C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\bin\Debug\net10.0-windows10.0.22621.0\DesktopWidgets.App.exe.WebView2\EBWebView\Default\shared_proto_db/MANIFEST-000001
+2026/11/02-22:46:39.541 2640 Reusing MANIFEST C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\bin\Debug\net10.0-windows10.0.22621.0\DesktopWidgets.App.exe.WebView2\EBWebView\Default\shared_proto_db/MANIFEST-000001
+2026/11/02-22:46:39.541 2640 Recovering log #3
+2026/11/02-22:46:39.542 2640 Reusing old log C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\bin\Debug\net10.0-windows10.0.22621.0\DesktopWidgets.App.exe.WebView2\EBWebView\Default\shared_proto_db/000003.log 

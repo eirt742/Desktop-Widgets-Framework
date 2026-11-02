@@ -16,10 +16,6 @@ C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widget
 C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\bin\Debug\net10.0-windows10.0.22621.0\Microsoft.Web.WebView2.WinForms.xml
 C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\bin\Debug\net10.0-windows10.0.22621.0\Microsoft.Web.WebView2.Wpf.xml
 C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\DesktopWidgets.App.csproj.AssemblyReference.cache
-C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\MainWindow.baml
-C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\WidgetWindow.baml
-C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\MainWindow.g.cs
-C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\WidgetWindow.g.cs
 C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\App.g.cs
 C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\DesktopWidgets.App_Content.g.cs
 C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\DesktopWidgets.App_MarkupCompile.cache
@@ -34,3 +30,10 @@ C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widget
 C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\DesktopWidgets.App.pdb
 C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\DesktopWidgets.App.genruntimeconfig.cache
 C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\ref\DesktopWidgets.App.dll
+C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\DesktopWidgets.App.sourcelink.json
+C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\MainWindow.baml
+C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\WidgetEditWindow.baml
+C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\WidgetWindow.baml
+C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\MainWindow.g.cs
+C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\WidgetEditWindow.g.cs
+C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\obj\Debug\net10.0-windows10.0.22621.0\WidgetWindow.g.cs
