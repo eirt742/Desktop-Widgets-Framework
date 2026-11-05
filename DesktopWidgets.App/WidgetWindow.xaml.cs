@@ -7,7 +7,6 @@ using DesktopWidgets.App.API;
 using DesktopWidgets.App.Core;
 using DesktopWidgets.App.Win32;
 using Microsoft.Web.WebView2.Core;
-using MessageBox = System.Windows.MessageBox;
 
 namespace DesktopWidgets.App;
 
@@ -49,15 +48,6 @@ public partial class WidgetWindow : Window
             _initializationCompleted.TrySetException(ex);
             LogError(ex);
 
-            if (!_isClosed)
-            {
-                MessageBox.Show(
-                    ex.ToString(),
-                    "Widget initialization error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error
-                );
-            }
         }
     }
 
