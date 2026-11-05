@@ -7,7 +7,6 @@ using DesktopWidgets.App.API;
 using DesktopWidgets.App.Core;
 using DesktopWidgets.App.Win32;
 using Microsoft.Web.WebView2.Core;
-using MessageBox = System.Windows.MessageBox;
 
 namespace DesktopWidgets.App;
 
@@ -49,15 +48,6 @@ public partial class WidgetWindow : Window
             _initializationCompleted.TrySetException(ex);
             LogError(ex);
 
-            if (!_isClosed)
-            {
-                MessageBox.Show(
-                    ex.ToString(),
-                    "Widget initialization error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error
-                );
-            }
         }
     }
 
@@ -95,14 +85,19 @@ public partial class WidgetWindow : Window
         System.Diagnostics.Debug.WriteLine($"Desktop attachment: {_desktopAttached}");
     }
 
-    private void SetupBridge()
+    public void SetScreenPosition(int x, int y)
     {
-        if (Browser.CoreWebView2 == null)
-            throw new InvalidOperationException("WebView2 is not initialized.");
+        Left = x;
+        Top = y;
 
-        _bridgeConnection = WidgetBridgeManager.Instance.Connect(
-            Browser.CoreWebView2, this
-        );
+        if (_desktopAttached)
+        {
+            DesktopHelper.MoveToScreenPosition(
+                new WindowInteropHelper(this).Handle,
+                x,
+                y
+            );
+        }
     }
 
     public void ToggleEditMode()
@@ -174,6 +169,8 @@ public partial class WidgetWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _isClosed = true;
+        if (!_initializationCompleted.Task.IsCompleted)
+            _initializationCompleted.TrySetCanceled();
         _editWindow?.Close();
         _editWindow = null;
 

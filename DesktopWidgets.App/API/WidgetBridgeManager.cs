@@ -46,8 +46,7 @@ namespace DesktopWidgets.App.API
                 int x = args[0].GetInt32();
                 int y = args[1].GetInt32();
 
-                context.Widget.Left = x;
-                context.Widget.Top = y;
+                context.Widget.SetScreenPosition(x, y);
 
                 return new
                 {
