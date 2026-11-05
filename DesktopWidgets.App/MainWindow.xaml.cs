@@ -58,41 +58,68 @@ public partial class MainWindow : Window
     
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        if (Widgets.Count == 0)
-        {
-            LoadOpenedWidgets();
+        await RestoreOpenedWidgetsAsync();
+    }
+
+    private async Task RestoreOpenedWidgetsAsync()
+    {
+        string folder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "DesktopWidgets"
+        );
+        string path = Path.Combine(folder, "opened-widgets.json");
+
+        if (!File.Exists(path))
             return;
-        }
 
-        string firstWidgetName = Widgets[0].Name;
-
+        List<WidgetWindowState>? savedWidgets;
         try
         {
-            // Открываем первый виджет без сохранения.
-            OpenWidget(null, null, firstWidgetName, false);
-
-            var firstWindow = _windows!
-                .FirstOrDefault(w => w.WidgetName == firstWidgetName);
-
-            if (firstWindow == null)
-                return;
-
-            // Ждём инициализации WebView2.
-            await firstWindow.InitializationCompleted;
-
-            // Закрываем его тоже без сохранения.
-            CloseWidget(null, null, firstWidgetName, false);
-
-            // Восстанавливаем сохранённые виджеты.
-            LoadOpenedWidgets();
+            string json = await File.ReadAllTextAsync(path);
+            savedWidgets = JsonSerializer.Deserialize<List<WidgetWindowState>>(json);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
-                ex.ToString(),
-                "Startup widget error"
-            );
+            MessageBox.Show(ex.Message, "Не удалось прочитать состояние виджетов");
+            return;
         }
+
+        if (savedWidgets == null || _windows == null)
+            return;
+
+        foreach (WidgetWindowState saved in savedWidgets)
+        {
+            if (string.IsNullOrWhiteSpace(saved.Name))
+                continue;
+
+            try
+            {
+                OpenWidget(null, null, saved.Name, false);
+
+                WidgetWindow? window = GetWidgetByName(saved.Name);
+                if (window == null)
+                    continue;
+
+                // Не запускаем следующий контроллер, пока предыдущий не завершил init.
+                await window.InitializationCompleted;
+
+                window.Left = saved.Left;
+                window.Top = saved.Top;
+
+                WidgetInfo? info = Widgets.FirstOrDefault(w => w.Name == saved.Name);
+                if (info != null)
+                    info.IsRunning = true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    ex.ToString(),
+                    $"Не удалось восстановить виджет: {saved.Name}"
+                );
+            }
+        }
+
+        SaveOpenedWidgets();
     }
     private void InitTray()
     {
