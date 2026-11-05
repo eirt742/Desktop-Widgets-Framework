@@ -95,16 +95,6 @@ public partial class WidgetWindow : Window
         System.Diagnostics.Debug.WriteLine($"Desktop attachment: {_desktopAttached}");
     }
 
-    private void SetupBridge()
-    {
-        if (Browser.CoreWebView2 == null)
-            throw new InvalidOperationException("WebView2 is not initialized.");
-
-        _bridgeConnection = WidgetBridgeManager.Instance.Connect(
-            Browser.CoreWebView2, this
-        );
-    }
-
     public void ToggleEditMode()
     {
         if (_editWindow != null)
@@ -174,6 +164,8 @@ public partial class WidgetWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _isClosed = true;
+        if (!_initializationCompleted.Task.IsCompleted)
+            _initializationCompleted.TrySetCanceled();
         _editWindow?.Close();
         _editWindow = null;
 
