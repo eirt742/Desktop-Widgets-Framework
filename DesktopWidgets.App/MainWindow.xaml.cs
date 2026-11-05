@@ -1,61 +1,96 @@
-﻿using System.Windows;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
+using System.Windows;
 using DesktopWidgets.App.API;
 using DesktopWidgets.App.Core;
+using Forms = System.Windows.Forms;
 using MessageBox = System.Windows.MessageBox;
 
 namespace DesktopWidgets.App;
 
 public partial class MainWindow : Window
 {
-    public ObservableCollection<WidgetInfo> Widgets { get; set; } = new();
-    private List<WidgetWindow>? _windows = new();
-    private NotifyIcon? _notifyIcon;
-    private GlobalHotkey? _showKey;
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true
+    };
 
-    private bool _onEditMode = false;
-    
+    private readonly Dictionary<string, WidgetWindow> _windows =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly string _statePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "DesktopWidgets",
+        "opened-widgets.json"
+    );
+
+    private Forms.NotifyIcon? _notifyIcon;
+    private GlobalHotkey? _showKey;
+    private bool _isShuttingDown;
+    private bool _onEditMode;
+
+    public ObservableCollection<WidgetInfo> Widgets { get; } = new();
+
     public MainWindow()
     {
         InitializeComponent();
-
-        string[] widgetsNames = WidgetData.GetWidgetsNames();
-
-        foreach (string widgetName in widgetsNames)
-        {
-            WidgetConfig? data = WidgetData.LoadWidgetData(widgetName);
-
-            Widgets.Add(new WidgetInfo
-            {
-                Name = data?.widget_name,
-                Description = data?.widget_description,
-                IsRunning = false
-            });
-        }
-
         DataContext = this;
 
-        Closed += OnClosed;
-
+        LoadWidgetCatalog();
         InitTray();
 
-        SourceInitialized += (_, _) =>
+        SourceInitialized += MainWindow_SourceInitialized;
+        Loaded += MainWindow_Loaded;
+    }
+
+    private void LoadWidgetCatalog()
+    {
+        foreach (string directoryName in WidgetData.GetWidgetsNames())
         {
-            var hotkey = new GlobalHotkey(
+            try
+            {
+                WidgetConfig? config = WidgetData.LoadWidgetData(directoryName);
+                if (config == null)
+                    continue;
+
+                Widgets.Add(new WidgetInfo
+                {
+                    Name = string.IsNullOrWhiteSpace(config.widget_name)
+                        ? directoryName
+                        : config.widget_name,
+                    Description = config.widget_description ?? string.Empty,
+                    IsRunning = false
+                });
+            }
+            catch (Exception ex)
+            {
+                LogError($"Failed to load widget manifest '{directoryName}'.", ex);
+            }
+        }
+    }
+
+    private void MainWindow_SourceInitialized(object? sender, EventArgs e)
+    {
+        try
+        {
+            _showKey = new GlobalHotkey(
                 this,
                 System.Windows.Input.Key.F9,
                 System.Windows.Input.ModifierKeys.Control
             );
-
-            hotkey.Pressed += ToggleEditMode;
-        };
-
-        Loaded += MainWindow_Loaded;
+            _showKey.Pressed += ShowMainWindow;
+        }
+        catch (Exception ex)
+        {
+            LogError("Global hotkey registration failed.", ex);
+        }
     }
-    
+
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         await RestoreOpenedWidgetsAsync();
@@ -63,288 +98,314 @@ public partial class MainWindow : Window
 
     private async Task RestoreOpenedWidgetsAsync()
     {
-        string folder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "DesktopWidgets"
-        );
-        string path = Path.Combine(folder, "opened-widgets.json");
-
-        if (!File.Exists(path))
+        if (!File.Exists(_statePath))
             return;
 
-        List<WidgetWindowState>? savedWidgets;
+        List<WidgetWindowState>? states;
         try
         {
-            string json = await File.ReadAllTextAsync(path);
-            savedWidgets = JsonSerializer.Deserialize<List<WidgetWindowState>>(json);
+            string json = await File.ReadAllTextAsync(_statePath);
+            states = JsonSerializer.Deserialize<List<WidgetWindowState>>(json);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Не удалось прочитать состояние виджетов");
+            LogError("Could not read saved widget state.", ex);
+            MessageBox.Show(
+                ex.Message,
+                "Не удалось восстановить виджеты",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning
+            );
             return;
         }
 
-        if (savedWidgets == null || _windows == null)
+        if (states == null)
             return;
 
-        foreach (WidgetWindowState saved in savedWidgets)
+        foreach (WidgetWindowState state in states)
         {
-            if (string.IsNullOrWhiteSpace(saved.Name))
+            if (string.IsNullOrWhiteSpace(state.Name))
                 continue;
 
             try
             {
-                OpenWidget(null, null, saved.Name, false);
-
-                WidgetWindow? window = GetWidgetByName(saved.Name);
-                if (window == null)
-                    continue;
-
-                // Не запускаем следующий контроллер, пока предыдущий не завершил init.
-                await window.InitializationCompleted;
-
-                window.Left = saved.Left;
-                window.Top = saved.Top;
-
-                WidgetInfo? info = Widgets.FirstOrDefault(w => w.Name == saved.Name);
-                if (info != null)
-                    info.IsRunning = true;
+                await StartWidgetAsync(state.Name, state.Left, state.Top, saveState: false);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    ex.ToString(),
-                    $"Не удалось восстановить виджет: {saved.Name}"
-                );
+                LogError($"Could not restore widget '{state.Name}'.", ex);
             }
         }
 
         SaveOpenedWidgets();
     }
+
     private void InitTray()
     {
-        _notifyIcon = new NotifyIcon
+        _notifyIcon = new Forms.NotifyIcon
         {
             Icon = System.Drawing.SystemIcons.Application,
             Visible = true,
-            Text = "DesktopWidgets Handler"
+            Text = "Desktop Widgets"
         };
-        
-        _notifyIcon.DoubleClick += (s, e) =>
-        {
-            Show();
-            WindowState = WindowState.Normal;
-            Activate();
-        };
+
+        var menu = new Forms.ContextMenuStrip();
+        menu.Items.Add("Открыть", null, (_, _) => ShowMainWindow());
+        menu.Items.Add("Выход", null, (_, _) => ShutdownApplication());
+        _notifyIcon.ContextMenuStrip = menu;
+        _notifyIcon.DoubleClick += (_, _) => ShowMainWindow();
     }
 
-    private void ToggleEditMode()
+    private void ShowMainWindow()
     {
-        if (_windows == null) return;
-        _onEditMode = !_onEditMode;
-        foreach (var w in _windows)
-        {
-            w.ToggleEditMode();
-        }
-        WidgetBridgeManager.Instance.BroadcastEvent("onEditModeToggle", new {enabled = _onEditMode});
-        SaveOpenedWidgets();
+        if (_isShuttingDown)
+            return;
+
+        Show();
+        if (WindowState == WindowState.Minimized)
+            WindowState = WindowState.Normal;
+        Activate();
     }
-    
+
     private void CloseToTray_CLick(object sender, RoutedEventArgs e)
     {
         Hide();
     }
 
-    private void OpenWidget(object? sender, RoutedEventArgs? e, string wName, bool save = true)
+    private async void WidgetButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_windows == null)
+        if (sender is not System.Windows.Controls.Button button ||
+            button.DataContext is not WidgetInfo widget ||
+            string.IsNullOrWhiteSpace(widget.Name))
             return;
 
-        if (_windows.Any(w => w.WidgetName == wName))
+        if (_windows.ContainsKey(widget.Name))
+        {
+            CloseWidget(widget.Name);
             return;
+        }
 
         try
         {
-            var data = WidgetData.LoadWidgetData(wName);
-
-            if (data == null)
-            {
-                MessageBox.Show(
-                    $"Не удалось загрузить manifest.json для {wName}\n" +
-                    $"Путь: {AppContext.BaseDirectory}\\Widgets\\{wName}\\manifest.json"
-                );
-                return;
-            }
-
-            var widgetWindow = new WidgetWindow(wName)
-            {
-                Left = 100,
-                Top = 100,
-                Width = data.width,
-                Height = data.height
-            };
-
-            widgetWindow.Closed += (_, _) =>
-            {
-                _windows.Remove(widgetWindow);
-
-                var info = Widgets.FirstOrDefault(w => w.Name == wName);
-                if (info != null)
-                    info.IsRunning = false;
-            };
-
-            _windows.Add(widgetWindow);
-            widgetWindow.Show();
-            if (save) SaveOpenedWidgets();
-
-            var widgetInfo = Widgets.FirstOrDefault(w => w.Name == wName);
-            if (widgetInfo != null)
-                widgetInfo.IsRunning = true;
-        }
-        catch (Exception exception)
-        {
-            MessageBox.Show(exception.Message);
-            throw;
-        }
-    }
-    
-    private void CloseWidget(object? sender, RoutedEventArgs? e, string wName, bool save = true)
-    {
-        if (_windows == null)
-            return;
-
-        var widgetWindow = _windows.FirstOrDefault(w => w.WidgetName == wName);
-
-        if (widgetWindow != null)
-            widgetWindow.Close();
-        if (save) SaveOpenedWidgets();
-    }
-    
-    private void WidgetButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not System.Windows.Controls.Button button)
-            return;
-
-        if (button.DataContext is not WidgetInfo widget)
-            return;
-
-        if (widget.IsRunning)
-            CloseWidget(sender, e, widget.Name);
-        else
-            OpenWidget(sender, e, widget.Name);
-    }
-    
-    private void OnClosed(object? sender, EventArgs e)
-    {
-        if (_windows == null) return;
-
-        SaveOpenedWidgets();
-
-        var windows = _windows.ToList();
-
-        foreach (var w in windows)
-        {
-            w.Close();
-        }
-
-        _windows.Clear();
-
-        _notifyIcon?.Dispose();
-        _showKey?.Dispose();
-
-        _showKey = null;
-    }
-
-    private WidgetWindow? GetWidgetByName(string name)
-    {
-        foreach (var w in _windows)
-        {
-            if (w.WidgetName == name) return w;
-        }
-        return null;
-    }
-    
-    private void SaveOpenedWidgets()
-    {
-        if (_windows == null)
-            return;
-
-        string folder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "DesktopWidgets"
-        );
-
-        Directory.CreateDirectory(folder);
-
-        string path = Path.Combine(folder, "opened-widgets.json");
-
-        var openedWidgets = _windows.Select(w => new WidgetWindowState
-        {
-            Name = w.WidgetName,
-            Left = w.Left,
-            Top = w.Top
-        }).ToList();
-
-        string json = JsonSerializer.Serialize(
-            openedWidgets,
-            new JsonSerializerOptions { WriteIndented = true }
-        );
-
-        File.WriteAllText(path, json);
-    }
-     
-    private void LoadOpenedWidgets()
-    {
-        string folder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "DesktopWidgets"
-        );
-
-        string path = Path.Combine(folder, "opened-widgets.json");
-
-        if (!File.Exists(path))
-            return;
-
-        try
-        {
-            string json = File.ReadAllText(path);
-
-            var savedWidgets =
-                JsonSerializer.Deserialize<List<WidgetWindowState>>(json);
-
-            if (savedWidgets == null)
-                return;
-
-            foreach (var saved in savedWidgets)
-            {
-                OpenWidget(null, null,  saved.Name, false);
-
-                var wdg = GetWidgetByName(saved.Name);
-                
-                var widgetInfo = Widgets.FirstOrDefault(
-                    w => w.Name == saved.Name
-                );
-                
-                if (widgetInfo == null)
-                    continue;
-
-                WidgetConfig? data = WidgetData.LoadWidgetData(saved.Name);
-
-                if (data != null && wdg != null)
-                {
-                    wdg.Left = saved.Left;
-                    wdg.Top = saved.Top;
-                }
-
-                widgetInfo.IsRunning = true;
-            }
+            await StartWidgetAsync(widget.Name, saveState: true);
         }
         catch (Exception ex)
         {
+            LogError($"Could not start widget '{widget.Name}'.", ex);
             MessageBox.Show(
                 ex.Message,
-                "Ошибка загрузки виджетов"
+                $"Не удалось запустить виджет: {widget.Name}",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error
             );
+        }
+    }
+
+    private async Task StartWidgetAsync(
+        string widgetName,
+        double? left = null,
+        double? top = null,
+        bool saveState = true)
+    {
+        if (_isShuttingDown)
+            throw new InvalidOperationException("Application is shutting down.");
+
+        if (_windows.ContainsKey(widgetName))
+            return;
+
+        WidgetConfig config = WidgetData.LoadWidgetData(widgetName)
+            ?? throw new InvalidDataException(
+                $"Manifest for widget '{widgetName}' is empty."
+            );
+
+        var window = new WidgetWindow(widgetName)
+        {
+            Width = config.width > 0 ? config.width : 280,
+            Height = config.height > 0 ? config.height : 145,
+            Left = left ?? 100,
+            Top = top ?? 100
+        };
+
+        _windows.Add(widgetName, window);
+        window.Closed += (_, _) => OnWidgetClosed(widgetName, window);
+        SetWidgetRunning(widgetName, true);
+
+        try
+        {
+            window.Show();
+            await window.InitializationCompleted;
+
+            if (saveState)
+                SaveOpenedWidgets();
+        }
+        catch
+        {
+            if (_windows.TryGetValue(widgetName, out WidgetWindow? current) &&
+                ReferenceEquals(current, window))
+            {
+                _windows.Remove(widgetName);
+            }
+
+            SetWidgetRunning(widgetName, false);
+
+            if (window.IsVisible)
+                window.Close();
+
+            throw;
+        }
+    }
+
+    private void CloseWidget(string widgetName)
+    {
+        if (!_windows.TryGetValue(widgetName, out WidgetWindow? window))
+            return;
+
+        window.Close();
+    }
+
+    private void OnWidgetClosed(string widgetName, WidgetWindow window)
+    {
+        if (_windows.TryGetValue(widgetName, out WidgetWindow? current) &&
+            ReferenceEquals(current, window))
+        {
+            _windows.Remove(widgetName);
+        }
+
+        SetWidgetRunning(widgetName, false);
+
+        if (!_isShuttingDown)
+            SaveOpenedWidgets();
+    }
+
+    private void SetWidgetRunning(string widgetName, bool running)
+    {
+        WidgetInfo? info = Widgets.FirstOrDefault(
+            item => string.Equals(item.Name, widgetName, StringComparison.OrdinalIgnoreCase)
+        );
+
+        if (info != null)
+            info.IsRunning = running;
+    }
+
+    private void ToggleEditMode()
+    {
+        if (_isShuttingDown)
+            return;
+
+        _onEditMode = !_onEditMode;
+
+        foreach (WidgetWindow window in _windows.Values.ToArray())
+            window.ToggleEditMode();
+
+        WidgetBridgeManager.Instance.BroadcastEvent(
+            "onEditModeToggle",
+            new { enabled = _onEditMode }
+        );
+    }
+
+    private void SaveOpenedWidgets()
+    {
+        if (_isShuttingDown)
+            return;
+
+        try
+        {
+            string? directory = Path.GetDirectoryName(_statePath);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
+            List<WidgetWindowState> states = _windows
+                .Where(pair => pair.Value.IsVisible)
+                .Select(pair => new WidgetWindowState
+                {
+                    Name = pair.Key,
+                    Left = pair.Value.Left,
+                    Top = pair.Value.Top
+                })
+                .ToList();
+
+            string temporaryPath = _statePath + ".tmp";
+            File.WriteAllText(
+                temporaryPath,
+                JsonSerializer.Serialize(states, JsonOptions)
+            );
+
+            File.Move(temporaryPath, _statePath, overwrite: true);
+        }
+        catch (Exception ex)
+        {
+            LogError("Could not save widget state.", ex);
+        }
+    }
+
+    private void ShutdownApplication()
+    {
+        if (_isShuttingDown)
+            return;
+
+        _isShuttingDown = true;
+        SaveStateForShutdown();
+
+        foreach (WidgetWindow window in _windows.Values.ToArray())
+            window.Close();
+
+        _windows.Clear();
+        _showKey?.Dispose();
+        _showKey = null;
+
+        if (_notifyIcon != null)
+        {
+            _notifyIcon.Visible = false;
+            _notifyIcon.Dispose();
+            _notifyIcon = null;
+        }
+
+        Application.Current.Shutdown();
+    }
+
+    private void SaveStateForShutdown()
+    {
+        try
+        {
+            string? directory = Path.GetDirectoryName(_statePath);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
+            var states = _windows.Select(pair => new WidgetWindowState
+            {
+                Name = pair.Key,
+                Left = pair.Value.Left,
+                Top = pair.Value.Top
+            }).ToList();
+
+            string temporaryPath = _statePath + ".tmp";
+            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(states, JsonOptions));
+            File.Move(temporaryPath, _statePath, overwrite: true);
+        }
+        catch (Exception ex)
+        {
+            LogError("Could not save widget state during shutdown.", ex);
+        }
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        ShutdownApplication();
+    }
+
+    private static void LogError(string message, Exception? exception = null)
+    {
+        try
+        {
+            string path = Path.Combine(Path.GetTempPath(), "DesktopWidgets_App.log");
+            File.AppendAllText(
+                path,
+                $"[{DateTime.Now:O}] {message}{Environment.NewLine}{exception}{Environment.NewLine}"
+            );
+        }
+        catch
+        {
+            // Logging must not interrupt application shutdown.
         }
     }
 }
