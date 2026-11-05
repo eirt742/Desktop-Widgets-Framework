@@ -1,5 +1,8 @@
 ﻿namespace DesktopWidgets.App.Core;
 
+/// <summary>
+/// класс, хранящий настройки виджета, необходимые для его открытия, загружаются из manifest.json
+/// </summary>
 public class WidgetConfig
 {
     public string? widget_name { get; set; }

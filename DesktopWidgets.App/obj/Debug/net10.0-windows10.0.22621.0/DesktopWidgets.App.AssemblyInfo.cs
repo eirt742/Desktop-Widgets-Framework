@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DesktopWidgets.App")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9f1f1b2e047dcfb12ca4566298b12bc340db49b3")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e9bc253741262e23f2b23209d6bade650411406f")]
 [assembly: System.Reflection.AssemblyProductAttribute("DesktopWidgets.App")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DesktopWidgets.App")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

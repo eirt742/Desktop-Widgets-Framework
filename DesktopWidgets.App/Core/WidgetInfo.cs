@@ -7,9 +7,9 @@ public class WidgetInfo : INotifyPropertyChanged
 {
     private bool _isRunning;
 
-    public string Name { get; set; } = "";
+    public string? Name { get; set; } = "";
 
-    public string Description { get; set; } = "";
+    public string? Description { get; set; } = "";
 
     public bool IsRunning
     {

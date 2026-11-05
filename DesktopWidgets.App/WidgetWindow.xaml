@@ -6,8 +6,8 @@
         Width="280"
         Height="145"
         WindowStyle="None"
-        AllowsTransparency="True"
-        Background="Transparent"
+        AllowsTransparency="False"
+        Background="#FF202020"
         ResizeMode="NoResize"
         ShowInTaskbar="False">
         

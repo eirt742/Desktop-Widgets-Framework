@@ -3,6 +3,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
+using DesktopWidgets.App.API;
 using DesktopWidgets.App.Core;
 using MessageBox = System.Windows.MessageBox;
 
@@ -14,6 +15,8 @@ public partial class MainWindow : Window
     private List<WidgetWindow>? _windows = new();
     private NotifyIcon? _notifyIcon;
     private GlobalHotkey? _showKey;
+
+    private bool _onEditMode = false;
     
     public MainWindow()
     {
@@ -21,22 +24,24 @@ public partial class MainWindow : Window
 
         string[] widgetsNames = WidgetData.GetWidgetsNames();
 
-        for (int i = 0; i < widgetsNames.Length; i++)
+        foreach (string widgetName in widgetsNames)
         {
-            WidgetConfig? data = WidgetData.LoadWidgetData(widgetsNames[i]);
-            Widgets.Add(new WidgetInfo{
-                Name = data.widget_name,
-                Description = data.widget_description,
+            WidgetConfig? data = WidgetData.LoadWidgetData(widgetName);
+
+            Widgets.Add(new WidgetInfo
+            {
+                Name = data?.widget_name,
+                Description = data?.widget_description,
                 IsRunning = false
-                 });
+            });
         }
-        
+
         DataContext = this;
-        
+
         Closed += OnClosed;
 
         InitTray();
-        
+
         SourceInitialized += (_, _) =>
         {
             var hotkey = new GlobalHotkey(
@@ -47,9 +52,48 @@ public partial class MainWindow : Window
 
             hotkey.Pressed += ToggleEditMode;
         };
-        LoadOpenedWidgets();
-    }
 
+        Loaded += MainWindow_Loaded;
+    }
+    
+    private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (Widgets.Count == 0)
+        {
+            LoadOpenedWidgets();
+            return;
+        }
+
+        string firstWidgetName = Widgets[0].Name;
+
+        try
+        {
+            // Открываем первый виджет без сохранения.
+            OpenWidget(null, null, firstWidgetName, false);
+
+            var firstWindow = _windows!
+                .FirstOrDefault(w => w.WidgetName == firstWidgetName);
+
+            if (firstWindow == null)
+                return;
+
+            // Ждём инициализации WebView2.
+            await firstWindow.InitializationCompleted;
+
+            // Закрываем его тоже без сохранения.
+            CloseWidget(null, null, firstWidgetName, false);
+
+            // Восстанавливаем сохранённые виджеты.
+            LoadOpenedWidgets();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                ex.ToString(),
+                "Startup widget error"
+            );
+        }
+    }
     private void InitTray()
     {
         _notifyIcon = new NotifyIcon
@@ -70,10 +114,12 @@ public partial class MainWindow : Window
     private void ToggleEditMode()
     {
         if (_windows == null) return;
+        _onEditMode = !_onEditMode;
         foreach (var w in _windows)
         {
             w.ToggleEditMode();
         }
+        WidgetBridgeManager.Instance.BroadcastEvent("onEditModeToggle", new {enabled = _onEditMode});
         SaveOpenedWidgets();
     }
     
@@ -82,7 +128,7 @@ public partial class MainWindow : Window
         Hide();
     }
 
-    private void OpenWidget(object sender, RoutedEventArgs e, string wName)
+    private void OpenWidget(object? sender, RoutedEventArgs? e, string wName, bool save = true)
     {
         if (_windows == null)
             return;
@@ -90,44 +136,52 @@ public partial class MainWindow : Window
         if (_windows.Any(w => w.WidgetName == wName))
             return;
 
-        var data = WidgetData.LoadWidgetData(wName);
-
-        if (data == null)
+        try
         {
-            MessageBox.Show(
-                $"Не удалось загрузить manifest.json для {wName}\n" +
-                $"Путь: {AppContext.BaseDirectory}\\Widgets\\{wName}\\manifest.json"
-            );
-            return;
+            var data = WidgetData.LoadWidgetData(wName);
+
+            if (data == null)
+            {
+                MessageBox.Show(
+                    $"Не удалось загрузить manifest.json для {wName}\n" +
+                    $"Путь: {AppContext.BaseDirectory}\\Widgets\\{wName}\\manifest.json"
+                );
+                return;
+            }
+
+            var widgetWindow = new WidgetWindow(wName)
+            {
+                Left = 100,
+                Top = 100,
+                Width = data.width,
+                Height = data.height
+            };
+
+            widgetWindow.Closed += (_, _) =>
+            {
+                _windows.Remove(widgetWindow);
+
+                var info = Widgets.FirstOrDefault(w => w.Name == wName);
+                if (info != null)
+                    info.IsRunning = false;
+            };
+
+            _windows.Add(widgetWindow);
+            widgetWindow.Show();
+            if (save) SaveOpenedWidgets();
+
+            var widgetInfo = Widgets.FirstOrDefault(w => w.Name == wName);
+            if (widgetInfo != null)
+                widgetInfo.IsRunning = true;
         }
-
-        var widgetWindow = new WidgetWindow(wName)
+        catch (Exception exception)
         {
-            Left = 100,
-            Top = 100,
-            Width = data.width,
-            Height = data.height
-        };
-
-        widgetWindow.Closed += (_, _) =>
-        {
-            _windows.Remove(widgetWindow);
-
-            var info = Widgets.FirstOrDefault(w => w.Name == wName);
-            if (info != null)
-                info.IsRunning = false;
-        };
-
-        _windows.Add(widgetWindow);
-        widgetWindow.Show();
-        SaveOpenedWidgets();
-
-        var widgetInfo = Widgets.FirstOrDefault(w => w.Name == wName);
-        if (widgetInfo != null)
-            widgetInfo.IsRunning = true;
+            MessageBox.Show(exception.Message);
+            throw;
+        }
     }
     
-    private void CloseWidget(object sender, RoutedEventArgs e, string wName)
+    private void CloseWidget(object? sender, RoutedEventArgs? e, string wName, bool save = true)
     {
         if (_windows == null)
             return;
@@ -136,7 +190,7 @@ public partial class MainWindow : Window
 
         if (widgetWindow != null)
             widgetWindow.Close();
-        SaveOpenedWidgets();
+        if (save) SaveOpenedWidgets();
     }
     
     private void WidgetButton_Click(object sender, RoutedEventArgs e)
@@ -151,7 +205,6 @@ public partial class MainWindow : Window
             CloseWidget(sender, e, widget.Name);
         else
             OpenWidget(sender, e, widget.Name);
-        
     }
     
     private void OnClosed(object? sender, EventArgs e)
@@ -173,6 +226,15 @@ public partial class MainWindow : Window
         _showKey?.Dispose();
 
         _showKey = null;
+    }
+
+    private WidgetWindow? GetWidgetByName(string name)
+    {
+        foreach (var w in _windows)
+        {
+            if (w.WidgetName == name) return w;
+        }
+        return null;
     }
     
     private void SaveOpenedWidgets()
@@ -228,38 +290,23 @@ public partial class MainWindow : Window
 
             foreach (var saved in savedWidgets)
             {
+                OpenWidget(null, null,  saved.Name, false);
+
+                var wdg = GetWidgetByName(saved.Name);
+                
                 var widgetInfo = Widgets.FirstOrDefault(
                     w => w.Name == saved.Name
                 );
-
                 
                 if (widgetInfo == null)
                     continue;
 
                 WidgetConfig? data = WidgetData.LoadWidgetData(saved.Name);
 
-                if (data != null)
+                if (data != null && wdg != null)
                 {
-                    var widgetWindow = new WidgetWindow(saved.Name)
-                    {
-                        Left = saved.Left,
-                        Top = saved.Top,
-                        Width = data.width,
-                        Height = data.height
-                    };
-
-                    widgetWindow.Closed += (_, _) =>
-                    {
-                        _windows?.Remove(widgetWindow);
-
-                        widgetInfo.IsRunning = false;
-
-                        SaveOpenedWidgets();
-                    };
-
-                    _windows!.Add(widgetWindow);
-
-                    widgetWindow.Show();
+                    wdg.Left = saved.Left;
+                    wdg.Top = saved.Top;
                 }
 
                 widgetInfo.IsRunning = true;

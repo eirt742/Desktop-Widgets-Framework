@@ -4,6 +4,9 @@ using System.Text.Json;
 
 namespace DesktopWidgets.App.Core
 {
+    /// <summary>
+    /// загружает данные о подключённых виджетах
+    /// </summary>
     public static class WidgetData
     {
         public static WidgetConfig? LoadWidgetData(string name)
@@ -26,7 +29,7 @@ namespace DesktopWidgets.App.Core
             return JsonSerializer.Deserialize<WidgetConfig>(json);
         }
 
-        public static string?[] GetWidgetsNames()
+        public static string[] GetWidgetsNames()
         {
             string widgetsPath = Path.Combine(
                 AppContext.BaseDirectory,
