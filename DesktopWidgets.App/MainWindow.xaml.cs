@@ -46,6 +46,7 @@ public partial class MainWindow : Window
 
         SourceInitialized += MainWindow_SourceInitialized;
         Loaded += MainWindow_Loaded;
+        Closed += OnClosed;
     }
 
     private void LoadWidgetCatalog()
