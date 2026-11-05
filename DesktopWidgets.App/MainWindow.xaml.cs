@@ -60,6 +60,7 @@ public partial class MainWindow : Window
 
                 Widgets.Add(new WidgetInfo
                 {
+                    Id = directoryName,
                     Name = string.IsNullOrWhiteSpace(config.widget_name)
                         ? directoryName
                         : config.widget_name,
@@ -176,18 +177,18 @@ public partial class MainWindow : Window
     {
         if (sender is not System.Windows.Controls.Button button ||
             button.DataContext is not WidgetInfo widget ||
-            string.IsNullOrWhiteSpace(widget.Name))
+            string.IsNullOrWhiteSpace(widget.Id))
             return;
 
-        if (_windows.ContainsKey(widget.Name))
+        if (_windows.ContainsKey(widget.Id))
         {
-            CloseWidget(widget.Name);
+            CloseWidget(widget.Id);
             return;
         }
 
         try
         {
-            await StartWidgetAsync(widget.Name, saveState: true);
+            await StartWidgetAsync(widget.Id, saveState: true);
         }
         catch (Exception ex)
         {
@@ -280,7 +281,7 @@ public partial class MainWindow : Window
     private void SetWidgetRunning(string widgetName, bool running)
     {
         WidgetInfo? info = Widgets.FirstOrDefault(
-            item => string.Equals(item.Name, widgetName, StringComparison.OrdinalIgnoreCase)
+            item => string.Equals(item.Id, widgetName, StringComparison.OrdinalIgnoreCase)
         );
 
         if (info != null)
