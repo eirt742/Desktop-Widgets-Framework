@@ -83,7 +83,7 @@ public partial class MainWindow : Window
                 System.Windows.Input.Key.F9,
                 System.Windows.Input.ModifierKeys.Control
             );
-            _showKey.Pressed += ShowMainWindow;
+            _showKey.Pressed += ToggleEditMode;
         }
         catch (Exception ex)
         {
