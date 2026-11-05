@@ -95,6 +95,21 @@ public partial class WidgetWindow : Window
         System.Diagnostics.Debug.WriteLine($"Desktop attachment: {_desktopAttached}");
     }
 
+    public void SetScreenPosition(int x, int y)
+    {
+        Left = x;
+        Top = y;
+
+        if (_desktopAttached)
+        {
+            DesktopHelper.MoveToScreenPosition(
+                new WindowInteropHelper(this).Handle,
+                x,
+                y
+            );
+        }
+    }
+
     public void ToggleEditMode()
     {
         if (_editWindow != null)
