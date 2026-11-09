@@ -38,10 +38,10 @@ Desktop Widgets превращает обычные веб-страницы в �
 В проекте есть примеры, на которых можно изучить структуру пакета и работу WebView2:
 
 - **Clock** — часы.
-- **FocusFlow** — виджет для фокусировки и работы по таймеру.
+- **FocusFlow** — виджет для фокусировки и работы по таймеру. не работаю корректно при текущей реализации
 - **NeonClock** — часы с неоновым оформлением.
-- **QuickNotes** — быстрые заметки.
-- **ReferenceWidget** — заготовка для экспериментов.
+- **QuickNotes** — быстрые заметки. не работаю корректно при текущей реализации
+- **ReferenceWidget** — заготовка для удобного создания своих виджетов.
 
 ## 🛠️ Технологии
 
@@ -49,7 +49,7 @@ Desktop Widgets превращает обычные веб-страницы в �
 |---|---|
 | C# / .NET 10 | Логика приложения и управление виджетами |
 | WPF / XAML | Главное окно, окна виджетов и интерфейс управления |
-| Microsoft Edge WebView2 | Отображение HTML/CSS/JavaScript |
+| WebView2 | Отображение HTML/CSS/JavaScript |
 | Win32 API | Управление окнами и интеграция с рабочим столом Windows |
 | System.Text.Json | Чтение manifest-файлов и сохранение состояния |
 
@@ -57,7 +57,7 @@ Desktop Widgets превращает обычные веб-страницы в �
 
 - Windows.
 - .NET 10 SDK.
-- Visual Studio 2022 с workload **Разработка классических приложений .NET** или другой редактор с поддержкой WPF и .NET 10.
+- Visual Studio 2022 с workload **Разработка классических приложений .NET** или другой редактор с поддержкой WPF и .NET 10. (или jetBrains Rider)
 - Microsoft Edge WebView2 Runtime.
 
 Проект нацелен на `net10.0-windows10.0.22621.0`.
@@ -70,7 +70,7 @@ Desktop Widgets превращает обычные веб-страницы в �
    git clone <URL-репозитория>
    ```
 
-2. Открой `DesktopWidgets.App/DesktopWidgets.App.csproj` в Visual Studio.
+2. Откройте `DesktopWidgets.App/DesktopWidgets.App.csproj` в Visual Studio.
 
 3. Восстанови зависимости и собери проект:
 
@@ -125,61 +125,19 @@ DesktopWidgets.App/
 
 ### Иконка
 
-Положи изображение `icon.png` рядом с `manifest.json`:
+Изображение `icon.png` рядом с `manifest.json`:
 
 ```text
 Widgets/MyWidget/icon.png
 ```
 
-Хост использует эту иконку для карточки виджета в библиотеке. Рекомендуется квадратное изображение с прозрачностью по необходимости.
+Хост использует эту иконку для карточки виджета в библиотеке. Рекомендуется квадратное изображение с прозрачностью по необходимости. При этом иконка для виджета является опциональной, если её не будет(или программа не сможет её найти), то в приложении будет видна иконка по умолчанию.
+
+Поддерживаемые форматы: JPG, BMP, GIF и ICO.
 
 ## 🔌 JavaScript Bridge
 
-Веб-страница виджета может отправить сообщение хосту через WebView2:
-
-```javascript
-const requestId = crypto.randomUUID();
-
-window.chrome.webview.postMessage({
-    id: requestId,
-    method: "getWidgetInfo",
-    args: []
-});
-
-window.chrome.webview.addEventListener("message", (event) => {
-    const response = event.data;
-
-    if (response.id !== requestId) return;
-
-    if (response.success) {
-        console.log("Ответ от Desktop Widgets:", response.result);
-    } else {
-        console.error("Ошибка bridge:", response.error);
-    }
-});
-```
-
-### Методы, зарегистрированные по умолчанию
-
-| Метод | Аргументы | Назначение |
-|---|---|---|
-| `getWidgetInfo` | нет | Возвращает имя виджета и версию bridge |
-| `setPosition` | `[x, y]` | Устанавливает координаты окна виджета |
-| `minimize` | нет | Сворачивает окно виджета |
-
-Хост также может отправлять события в страницу. Например, при переключении режима редактирования приходит сообщение с типом `onEditModeToggle` и полем `data.enabled`.
-
-```javascript
-window.chrome.webview.addEventListener("message", (event) => {
-    const message = event.data;
-
-    if (message.type === "onEditModeToggle") {
-        console.log("Режим редактирования:", message.data.enabled);
-    }
-});
-```
-
-Другие методы могут быть добавлены в `WidgetBridgeManager` на стороне C#.
+Эта функция пока не реализована до рабочего состояния. Она появится в последующих версиях.
 
 ## 🧑‍💻 Как добавить свой виджет
 
@@ -193,7 +151,7 @@ window.chrome.webview.addEventListener("message", (event) => {
 
 ## 🗺️ Планы
 
-- [ ] Более удобный редактор и настройки виджетов.
+- [ ] Настройки виджетов.
 - [ ] Расширение JavaScript Bridge дополнительными методами и событиями.
 - [ ] Улучшение управления пакетами виджетов.
 - [ ] Документация API для авторов виджетов.
@@ -210,6 +168,6 @@ window.chrome.webview.addEventListener("message", (event) => {
 
 <div align="center">
 
-**Сделано для тех, кто любит настраивать свой рабочий стол.** 💙
+**Сделано для тех, кто любит настраивать свой рабочий стол, тем, кому нечем заняться :|**
 
 </div>
