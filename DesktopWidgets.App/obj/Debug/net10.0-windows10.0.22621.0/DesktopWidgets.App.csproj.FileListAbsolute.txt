@@ -69,3 +69,4 @@ C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widget
 C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\bin\Debug\net10.0-windows10.0.22621.0\Widgets\ReferenceWidget.zip
 C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\bin\Debug\net10.0-windows10.0.22621.0\Resources\Icons\settings_icon.png
 C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\bin\Debug\net10.0-windows10.0.22621.0\Resources\Icons\reload.png
+C:\Users\eirtk\Desktop\всякая всячина\приколы\Desktop-Widgets-Framework\DesktopWidgets.App\bin\Debug\net10.0-windows10.0.22621.0\Resources\app.ico

@@ -189,7 +189,10 @@ public partial class MainWindow : Window
     {
         _notifyIcon = new NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = new Icon(Path.Combine(
+                    AppContext.BaseDirectory,
+                    "Resources",
+                    "app.ico")),
             Visible = true,
             Text = "DesktopWidgets Handler"
         };
