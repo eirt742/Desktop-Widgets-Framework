@@ -19,14 +19,21 @@ namespace DesktopWidgets.App.Core
             );
 
             if (!File.Exists(path))
+            {
                 throw new FileNotFoundException(
                     "Manifest не найден",
                     path
                 );
+                return null;
+            }
 
             string json = File.ReadAllText(path);
 
-            return JsonSerializer.Deserialize<WidgetConfig>(json);
+            var res = JsonSerializer.Deserialize<WidgetConfig>(json);
+
+            res?.widget_name = name;
+
+            return res;
         }
 
         public static string[] GetWidgetsNames()

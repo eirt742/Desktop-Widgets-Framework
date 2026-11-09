@@ -1,6 +1,5 @@
 {
-    "widget_name": "NeonClock",
     "widget_description": "Неоновые часы и дата",
-    "whith": 320,
+    "width": 320,
     "height": 220
 }

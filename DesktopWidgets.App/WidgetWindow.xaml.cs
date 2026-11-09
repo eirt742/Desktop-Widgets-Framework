@@ -82,7 +82,6 @@ public partial class WidgetWindow : Window
 
         Browser.Source = new Uri(htmlPath);
 
-        // Attach only after the WebView2 controller and initial navigation are set up.
         await Dispatcher.InvokeAsync(
             () => { },
             System.Windows.Threading.DispatcherPriority.ApplicationIdle

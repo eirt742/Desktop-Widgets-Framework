@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using DesktopWidgets.App.Core;
+using MessageBox = System.Windows.MessageBox;
 
 namespace DesktopWidgets.App;
 

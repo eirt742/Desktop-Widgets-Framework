@@ -8,23 +8,23 @@ using Microsoft.Web.WebView2.Wpf;
 namespace DesktopWidgets.App.Core;
 
 /// <summary>
-/// Owns the single WebView2 environment and serializes controller creation.
-/// All WebView2 controls in the application must use this service.
+/// Сервис управления средой WebView2. 
+/// Обеспечивает изоляцию профилей для параллельно открывающихся виджетов.
 /// </summary>
 internal static class WebView2Runtime
 {
-    private static readonly Lazy<Task<CoreWebView2Environment>> EnvironmentTask =
-        new(CreateEnvironmentAsync, LazyThreadSafetyMode.ExecutionAndPublication);
-
     private static readonly SemaphoreSlim ControllerGate = new(1, 1);
 
-    private static async Task<CoreWebView2Environment> CreateEnvironmentAsync()
+    private static async Task<CoreWebView2Environment> CreateEnvironmentForWidgetAsync()
     {
-        string userDataFolder = Path.Combine(
+        string baseDataFolder = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "DesktopWidgets",
             "WebView2"
         );
+
+        string uniqueFolderName = $"Widget_{Guid.NewGuid():N}";
+        string userDataFolder = Path.Combine(baseDataFolder, uniqueFolderName);
 
         Directory.CreateDirectory(userDataFolder);
 
@@ -42,13 +42,16 @@ internal static class WebView2Runtime
         await ControllerGate.WaitAsync();
         try
         {
-            CoreWebView2Environment environment = await EnvironmentTask.Value;
-            await control.EnsureCoreWebView2Async(environment);
+            CoreWebView2Environment environment = await CreateEnvironmentForWidgetAsync();
 
-            return control.CoreWebView2
-                ?? throw new InvalidOperationException(
-                    "WebView2 initialization completed without a CoreWebView2 instance."
-                );
+            await control.Dispatcher.InvokeAsync(async () =>
+            {
+                await control.EnsureCoreWebView2Async(environment);
+            }).Task.Unwrap();
+
+            return control.CoreWebView2 ?? throw new InvalidOperationException(
+                "WebView2 initialization completed without a CoreWebView2 instance."
+            );
         }
         finally
         {

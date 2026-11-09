@@ -1,6 +1,5 @@
 {
-    "widget_name": "QuickNotes",
     "widget_description": "Быстрые заметки с автосохранением",
-    "whith": 320,
+    "width": 320,
     "height": 300
 }
