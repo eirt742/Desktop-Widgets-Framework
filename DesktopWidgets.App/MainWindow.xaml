@@ -389,7 +389,7 @@
                             Content="+  Добавить виджет"
                             Style="{StaticResource AccentButton}"
                             VerticalAlignment="Center"
-                            Click="RefreshWidgets_Clicked"/>
+                            Click="AddWidget_Click"/>
                 </Grid>
 
                 <!-- Плитки виджетов -->
@@ -625,7 +625,8 @@
                             Padding="0"
                             HorizontalAlignment="Left"
                             Style="{StaticResource IosButton}"
-                            ToolTip="Настройки">
+                            ToolTip="Настройки"
+                            Click="OpenSettings_Click">
 
                         <Image Source="pack://application:,,,/Resources/Icons/settings_icon.png"
                                Width="22"

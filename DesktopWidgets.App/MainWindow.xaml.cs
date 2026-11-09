@@ -430,4 +430,14 @@ public partial class MainWindow : Window
     {
         WindowState = WindowState.Minimized;
     }
+    
+    private void OpenSettings_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("Данная функция пока не доступана!");
+    }
+    
+    private void AddWidget_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("Данная функция пока не доступана!");
+    }
 }
