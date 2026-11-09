@@ -2,8 +2,11 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
+using System.Windows.Input;
+using System.Windows.Interop;
 using DesktopWidgets.App.API;
 using DesktopWidgets.App.Core;
+using DesktopWidgets.App.Win32;
 using MessageBox = System.Windows.MessageBox;
 
 namespace DesktopWidgets.App;
@@ -52,7 +55,6 @@ public partial class MainWindow : Window
         {
             WidgetConfig? data = WidgetData.LoadWidgetData(widgetName);
 
-            // Не добавляем виджеты без корректного manifest.json
             if (data is null)
                 continue;
 
@@ -124,6 +126,14 @@ public partial class MainWindow : Window
                 window.Left = saved.Left;
                 window.Top = saved.Top;
 
+                var hwnd = new WindowInteropHelper(window).Handle;
+
+                DesktopHelper.MoveToScreenPosition(
+                    hwnd,
+                    (int)Math.Round(saved.Left),
+                    (int)Math.Round(saved.Top)
+                );
+
                 WidgetInfo? info = Widgets.FirstOrDefault(w => w.Name == saved.Name);
                 if (info != null)
                     info.IsRunning = true;
@@ -147,6 +157,24 @@ public partial class MainWindow : Window
             Visible = true,
             Text = "DesktopWidgets Handler"
         };
+
+        var menu = new ContextMenuStrip();
+
+        menu.Items.Add("Открыть", null, (_, _) =>
+        {
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+        });
+        
+        menu.Items.Add("Выход", null, (_, _) =>
+        {
+            _notifyIcon.Visible = false;
+            _notifyIcon.Dispose();
+            System.Windows.Application.Current.Shutdown();
+        });
+
+        _notifyIcon.ContextMenuStrip = menu;
         
         _notifyIcon.DoubleClick += (_, _) =>
         {
@@ -319,59 +347,17 @@ public partial class MainWindow : Window
 
         File.WriteAllText(path, json);
     }
-     
-    private void LoadOpenedWidgets()
+
+    private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        string folder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "DesktopWidgets"
-        );
-
-        string path = Path.Combine(folder, "opened-widgets.json");
-
-        if (!File.Exists(path))
-            return;
-
-        try
+        if (e.LeftButton == MouseButtonState.Pressed)
         {
-            string json = File.ReadAllText(path);
-
-            var savedWidgets =
-                JsonSerializer.Deserialize<List<WidgetWindowState>>(json);
-
-            if (savedWidgets == null)
-                return;
-
-            foreach (var saved in savedWidgets)
-            {
-                OpenWidget(saved.Name, false);
-
-                var wdg = GetWidgetByName(saved.Name);
-                
-                var widgetInfo = Widgets.FirstOrDefault(
-                    w => w.Name == saved.Name
-                );
-                
-                if (widgetInfo == null)
-                    continue;
-
-                WidgetConfig? data = WidgetData.LoadWidgetData(saved.Name);
-
-                if (data != null && wdg != null)
-                {
-                    wdg.Left = saved.Left;
-                    wdg.Top = saved.Top;
-                }
-
-                widgetInfo.IsRunning = true;
-            }
+            DragMove();
         }
-        catch (Exception ex)
-        {
-            MessageBox.Show(
-                ex.Message,
-                "Ошибка загрузки виджетов"
-            );
-        }
+    }
+    
+    private void MinimizeWindow_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
     }
 }
