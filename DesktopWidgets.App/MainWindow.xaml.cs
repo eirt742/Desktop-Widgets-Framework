@@ -1,5 +1,4 @@
 ﻿using System.Windows;
-using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
@@ -11,54 +10,74 @@ namespace DesktopWidgets.App;
 
 public partial class MainWindow : Window
 {
-    public ObservableCollection<WidgetInfo> Widgets { get; set; } = new();
-    private List<WidgetWindow>? _windows = new();
+    public ObservableCollection<WidgetInfo> Widgets { get; set; } = [];
+    private readonly List<WidgetWindow>? _windows = [];
     private NotifyIcon? _notifyIcon;
     private GlobalHotkey? _showKey;
 
-    private bool _onEditMode = false;
+    private bool _onEditMode;
     
     public MainWindow()
     {
         InitializeComponent();
 
-        string[] widgetsNames = WidgetData.GetWidgetsNames();
-
-        foreach (string widgetName in widgetsNames)
-        {
-            WidgetConfig? data = WidgetData.LoadWidgetData(widgetName);
-
-            Widgets.Add(new WidgetInfo
-            {
-                Name = data?.widget_name,
-                Description = data?.widget_description,
-                IsRunning = false
-            });
-        }
-
         DataContext = this;
 
-        Closed += OnClosed;
+        LoadInstalledWidgets();
 
+        Closed += OnClosed;
         InitTray();
 
         SourceInitialized += (_, _) =>
         {
-            var hotkey = new GlobalHotkey(
+            _showKey = new GlobalHotkey(
                 this,
                 System.Windows.Input.Key.F9,
                 System.Windows.Input.ModifierKeys.Control
             );
 
-            hotkey.Pressed += ToggleEditMode;
+            _showKey.Pressed += ToggleEditMode;
         };
 
         Loaded += MainWindow_Loaded;
     }
+
+    private void LoadInstalledWidgets()
+    {
+        Widgets.Clear();
+
+        string[] widgetNames = WidgetData.GetWidgetsNames();
+
+        foreach (string widgetName in widgetNames)
+        {
+            WidgetConfig? data = WidgetData.LoadWidgetData(widgetName);
+
+            // Не добавляем виджеты без корректного manifest.json
+            if (data is null)
+                continue;
+
+            Widgets.Add(new WidgetInfo
+            {
+                Name = string.IsNullOrWhiteSpace(data.widget_name)
+                    ? widgetName
+                    : data.widget_name,
+
+                Description = data.widget_description ?? "Описание отсутствует",
+                IsRunning = false
+            });
+        }
+    }
     
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        await RestoreOpenedWidgetsAsync();
+        try
+        {
+            await RestoreOpenedWidgetsAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message);
+        }
     }
 
     private async Task RestoreOpenedWidgetsAsync()
@@ -94,13 +113,12 @@ public partial class MainWindow : Window
 
             try
             {
-                OpenWidget(null, null, saved.Name, false);
+                OpenWidget(saved.Name, false);
 
                 WidgetWindow? window = GetWidgetByName(saved.Name);
                 if (window == null)
                     continue;
 
-                // Не запускаем следующий контроллер, пока предыдущий не завершил init.
                 await window.InitializationCompleted;
 
                 window.Left = saved.Left;
@@ -125,12 +143,12 @@ public partial class MainWindow : Window
     {
         _notifyIcon = new NotifyIcon
         {
-            Icon = System.Drawing.SystemIcons.Application,
+            Icon = SystemIcons.Application,
             Visible = true,
             Text = "DesktopWidgets Handler"
         };
         
-        _notifyIcon.DoubleClick += (s, e) =>
+        _notifyIcon.DoubleClick += (_, _) =>
         {
             Show();
             WindowState = WindowState.Normal;
@@ -155,7 +173,7 @@ public partial class MainWindow : Window
         Hide();
     }
 
-    private void OpenWidget(object? sender, RoutedEventArgs? e, string wName, bool save = true)
+    private void OpenWidget(string wName, bool save = true)
     {
         if (_windows == null)
             return;
@@ -208,7 +226,7 @@ public partial class MainWindow : Window
         }
     }
     
-    private void CloseWidget(object? sender, RoutedEventArgs? e, string wName, bool save = true)
+    private void CloseWidget(string wName, bool save = true)
     {
         if (_windows == null)
             return;
@@ -223,15 +241,30 @@ public partial class MainWindow : Window
     private void WidgetButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not System.Windows.Controls.Button button)
+        {
             return;
+        }
+
+        MessageBox.Show(
+            $"Button найдена.\nDataContext: {button.DataContext?.GetType().FullName ?? "null"}"
+        );
 
         if (button.DataContext is not WidgetInfo widget)
+        {
+            MessageBox.Show("DataContext кнопки не является WidgetInfo.");
             return;
+        }
+
+        if (string.IsNullOrWhiteSpace(widget.Name))
+        {
+            MessageBox.Show("Имя виджета пустое.");
+            return;
+        }
 
         if (widget.IsRunning)
-            CloseWidget(sender, e, widget.Name);
+            CloseWidget(widget.Name);
         else
-            OpenWidget(sender, e, widget.Name);
+            OpenWidget(widget.Name);
     }
     
     private void OnClosed(object? sender, EventArgs e)
@@ -255,14 +288,8 @@ public partial class MainWindow : Window
         _showKey = null;
     }
 
-    private WidgetWindow? GetWidgetByName(string name)
-    {
-        foreach (var w in _windows)
-        {
-            if (w.WidgetName == name) return w;
-        }
-        return null;
-    }
+    private WidgetWindow? GetWidgetByName(string name) => _windows?.FirstOrDefault(w => w.WidgetName == name);
+    
     
     private void SaveOpenedWidgets()
     {
@@ -317,7 +344,7 @@ public partial class MainWindow : Window
 
             foreach (var saved in savedWidgets)
             {
-                OpenWidget(null, null,  saved.Name, false);
+                OpenWidget(saved.Name, false);
 
                 var wdg = GetWidgetByName(saved.Name);
                 

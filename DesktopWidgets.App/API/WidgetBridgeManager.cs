@@ -1,6 +1,4 @@
 ﻿using Microsoft.Web.WebView2.Core;
-using System;
-using System.Collections.Generic;
 using System.Text.Json;
 
 namespace DesktopWidgets.App.API

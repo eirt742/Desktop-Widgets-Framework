@@ -24,7 +24,6 @@ namespace DesktopWidgets.App.Core
                     "Manifest не найден",
                     path
                 );
-                return null;
             }
 
             string json = File.ReadAllText(path);
