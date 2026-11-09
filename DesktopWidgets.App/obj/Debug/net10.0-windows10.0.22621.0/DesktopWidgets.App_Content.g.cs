@@ -39,6 +39,7 @@
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("widgets/referencewidget/web/main.js")]
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("widgets/referencewidget/web/style.css")]
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("resources/app.ico")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("resources/icons/folder.png")]
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("resources/icons/reload.png")]
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("resources/icons/settings_icon.png")]
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("webview2loader.dll")]

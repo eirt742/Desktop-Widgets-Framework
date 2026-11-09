@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Windows.Controls;
@@ -223,7 +224,7 @@ public partial class MainWindow : Window
         };
     }
 
-    private void ToggleEditMode()
+    public void ToggleEditMode()
     {
         if (_windows == null) return;
         _onEditMode = !_onEditMode;
@@ -239,7 +240,6 @@ public partial class MainWindow : Window
     {
         Hide();
     }
-    
     
     private void WidgetSearchBox_TextChanged(
         object sender,
@@ -299,7 +299,7 @@ public partial class MainWindow : Window
                 return;
             }
 
-            var widgetWindow = new WidgetWindow(wName)
+            var widgetWindow = new WidgetWindow(wName, this)
             {
                 Left = 100,
                 Top = 100,
@@ -442,5 +442,11 @@ public partial class MainWindow : Window
     private void AddWidget_Click(object sender, RoutedEventArgs e)
     {
         MessageBox.Show("Данная функция пока не доступана!");
+    }
+
+    private void OpenWidgetsFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var path = WidgetData.GetWidgetsPath();
+        Process.Start("explorer.exe", path);
     }
 }

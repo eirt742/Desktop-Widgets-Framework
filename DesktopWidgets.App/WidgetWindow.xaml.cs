@@ -25,7 +25,7 @@ public partial class WidgetWindow : Window
     public string WidgetName => _widgetName;
     public Task InitializationCompleted => _initializationCompleted.Task;
 
-    public WidgetWindow(string widgetName)
+    public WidgetWindow(string widgetName, MainWindow? mw)
     {
         if (string.IsNullOrWhiteSpace(widgetName))
             throw new ArgumentException("Widget name cannot be empty.", nameof(widgetName));

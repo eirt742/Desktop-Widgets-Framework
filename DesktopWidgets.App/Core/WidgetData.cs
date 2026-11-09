@@ -91,8 +91,6 @@ namespace DesktopWidgets.App.Core
 
                     bitmap.BeginInit();
 
-                    // Загружаем изображение в память,
-                    // чтобы освободить файл после загрузки.
                     bitmap.CacheOption = BitmapCacheOption.OnLoad;
 
                     bitmap.UriSource = new Uri(
@@ -119,10 +117,7 @@ namespace DesktopWidgets.App.Core
 
         public static string[] GetWidgetsNames()
         {
-            string widgetsPath = Path.Combine(
-                AppContext.BaseDirectory,
-                "Widgets"
-            );
+            var widgetsPath = GetWidgetsPath();
 
             if (!Directory.Exists(widgetsPath))
                 return [];
@@ -135,5 +130,10 @@ namespace DesktopWidgets.App.Core
                     .Select(name => name!)
             ];
         }
+        
+        public static string GetWidgetsPath() => Path.Combine(
+            AppContext.BaseDirectory,
+            "Widgets"
+        );
     }
 }
