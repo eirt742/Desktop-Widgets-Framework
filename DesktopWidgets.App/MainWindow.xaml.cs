@@ -2,6 +2,8 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
+using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
 using DesktopWidgets.App.API;
@@ -47,16 +49,36 @@ public partial class MainWindow : Window
 
     private void LoadInstalledWidgets()
     {
+        var runningStates = new Dictionary<string, bool>(
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var widget in Widgets)
+        {
+            if (!string.IsNullOrWhiteSpace(widget.Name))
+            {
+                runningStates[widget.Name] = widget.IsRunning;
+            }
+        }
+
         Widgets.Clear();
 
         string[] widgetNames = WidgetData.GetWidgetsNames();
 
-        foreach (string widgetName in widgetNames)
+        foreach (var widgetName in widgetNames)
         {
             WidgetConfig? data = WidgetData.LoadWidgetData(widgetName);
 
             if (data is null)
                 continue;
+
+            string displayName = string.IsNullOrWhiteSpace(data.widget_name)
+                ? widgetName
+                : data.widget_name;
+
+            bool isRunning = runningStates.TryGetValue(
+                displayName,
+                out bool previousState
+            ) && previousState;
 
             Widgets.Add(new WidgetInfo
             {
@@ -65,8 +87,22 @@ public partial class MainWindow : Window
                     : data.widget_name,
 
                 Description = data.widget_description ?? "Описание отсутствует",
-                IsRunning = false
+
+                Icon = WidgetData.LoadWidgetIcon(widgetName),
+
+                IsRunning = isRunning
             });
+        }
+    }
+
+    private void RefreshWidgets_Clicked(object sender, RoutedEventArgs a)
+    {
+        LoadInstalledWidgets();
+
+        // Обновляем отображение с учётом текущего поиска
+        if (FindResource("WidgetsView") is CollectionViewSource source)
+        {
+            source.View?.Refresh();
         }
     }
     
@@ -200,6 +236,44 @@ public partial class MainWindow : Window
     {
         Hide();
     }
+    
+    
+    private void WidgetSearchBox_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
+        if (FindResource("WidgetsView") is CollectionViewSource source)
+        {
+            source.View?.Refresh();
+        }
+    }
+
+    private void WidgetsView_Filter(
+        object sender,
+        FilterEventArgs e)
+    {
+        if (e.Item is not WidgetInfo widget)
+        {
+            e.Accepted = false;
+            return;
+        }
+
+        string search = WidgetSearchBox?.Text?.Trim() ?? "";
+
+        if (string.IsNullOrWhiteSpace(search))
+        {
+            e.Accepted = true;
+            return;
+        }
+
+        e.Accepted =
+            (!string.IsNullOrEmpty(widget.Name) &&
+             widget.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
+            ||
+            (!string.IsNullOrEmpty(widget.Description) &&
+             widget.Description.Contains(search, StringComparison.OrdinalIgnoreCase));
+    }
+
 
     private void OpenWidget(string wName, bool save = true)
     {
@@ -272,10 +346,6 @@ public partial class MainWindow : Window
         {
             return;
         }
-
-        MessageBox.Show(
-            $"Button найдена.\nDataContext: {button.DataContext?.GetType().FullName ?? "null"}"
-        );
 
         if (button.DataContext is not WidgetInfo widget)
         {
